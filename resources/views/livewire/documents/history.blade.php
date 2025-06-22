@@ -1,0 +1,48 @@
+<div class="max-w-5xl mx-auto p-6 bg-white dark:bg-gray-800 shadow rounded-lg">
+    <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Document History</h2>
+
+    <table class="min-w-full text-sm table-auto">
+        <thead class="bg-gray-100 dark:bg-gray-700 text-left">
+            <tr>
+                <th class="p-2">Filename</th>
+                <th class="p-2">Type</th>
+                <th class="p-2">Status</th>
+                <th class="p-2">Timestamp</th>
+                <th class="p-2">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+            @forelse ($documents as $doc)
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td class="p-2">{{ basename($doc->file_path) }}</td>
+                    <td class="p-2 text-xs text-gray-500">{{ $doc->type }}</td>
+                    <td class="p-2">
+                        @if ($doc->watermark && !$doc->watermark->revoked)
+                            <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Valid</span>
+                        @elseif ($doc->watermark && $doc->watermark->revoked)
+                            <span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">Revoked</span>
+                        @else
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">Unmarked</span>
+                        @endif
+                    </td>
+                    <td class="p-2">{{ $doc->created_at->diffForHumans() }}</td>
+                    <td class="p-2 flex gap-2">
+                        <a href="{{ Storage::url($doc->file_path) }}" target="_blank" class="text-indigo-600 hover:underline text-xs">View</a>
+                        @if ($doc->watermark)
+                            <button wire:click="verify('{{ $doc->id }}')" class="text-blue-600 hover:underline text-xs">Verify</button>
+
+                            <button wire:click="$emit('verifyDoc', '{{ $doc->uuid }}')" class="text-blue-600 hover:underline text-xs">Verify</button>
+                            <button wire:click="$emit('revokeDoc', '{{ $doc->id }}')" class="text-red-600 hover:underline text-xs">Revoke</button>
+                        @endif
+                    </td>
+                </tr>
+            @empty
+                <tr><td colspan="5" class="p-4 text-center text-gray-500">No documents found.</td></tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    <div class="mt-4">
+        {{-- $documents->links() --}}
+    </div>
+</div>

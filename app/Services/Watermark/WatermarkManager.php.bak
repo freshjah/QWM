@@ -1,0 +1,62 @@
+<?php
+
+namespace App\Services\Watermark;
+
+use App\Services\Watermark\Strategies\PdfWatermarkStrategy;
+use App\Services\Watermark\Strategies\ImageWatermarkStrategy;
+use App\Services\Watermark\Strategies\VideoWatermarkStrategy;
+use Illuminate\Support\Facades\Http;
+
+class WatermarkManager
+{
+    protected array $strategies;
+
+    public function __construct()
+    {
+        $this->strategies = [
+            'application/pdf' => PdfWatermarkStrategy::class,
+            'image/jpeg' => ImageWatermarkStrategy::class,
+            'image/png' => ImageWatermarkStrategy::class,
+            'video/mp4' => VideoWatermarkStrategy::class,
+        ];
+    }
+
+    public function getStrategy(string $mime): WatermarkStrategyInterface
+    {
+        if (!array_key_exists($mime, $this->strategies)) {
+            throw new \Exception("Unsupported file type: $mime");
+        }
+
+        return app($this->strategies[$mime]);
+    }
+
+    public function signHybrid(string $data): array
+    {
+        $keyId = '2024-QMARK-V1';
+
+        $response = Http::post(env('PQC_API_URL') . '/sign', [
+            'data' => $data,
+            'key_id' => $keyId,
+        ]);
+
+        if ($response->failed()) {
+            throw new \Exception('Failed to sign data.');
+        }
+
+        return [
+            'signature' => $response['signature'],
+            'key_id' => $response['key_id'] ?? $keyId,
+        ];
+    }
+
+    public function verifyHybrid(string $data, string $signature, string $keyId): bool
+    {
+        $response = Http::post(env('PQC_API_URL') . '/verify', [
+            'data' => $data,
+            'signature' => $signature,
+            'key_id' => $keyId,
+        ]);
+
+        return $response->ok() && $response['valid'] === true;
+    }    
+}
